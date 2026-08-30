@@ -4,34 +4,47 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-// mock up 
-const MOCK_SUMMARY = {
-  totalOwe: 1250,
-  totalReceive: 840,
-};
-
+// ยังเป็นข้อมูลปลอม (รอ API balance)
+const MOCK_SUMMARY = { totalOwe: 1250, totalReceive: 840 };
 const MOCK_ACTIONS = [
-  { id: 1, personName: 'Weerachit', amount: 250, groupName: 'ทริปชะอำ' },
-  { id: 2, personName: 'Yanawut', amount: 1000, groupName: 'ค่าหอพัก' },
+  { id: 1, personName: 'สมชาย', amount: 250, groupName: 'ทริปเชียงใหม่' },
 ];
-
-const MOCK_GROUPS = [
-  { id: 1, name: 'ทริปชะอำ', memberCount: 4, myBalance: -250 },
-  { id: 2, name: 'ค่าหอพัก', memberCount: 2, myBalance: 840 },
-  { id: 3, name: 'ปาร์ตี้ปีใหม่', memberCount: 6, myBalance: 0 },
-];
-// ──────────────────────────────────────────────────────
 
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [checked, setChecked] = useState(false);
+  const [groups, setGroups] = useState([]);
+  const [loadingGroups, setLoadingGroups] = useState(true);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setUser(JSON.parse(stored));
     setChecked(true);
+
+    if (!token) {
+      setLoadingGroups(false);
+      return;
+    }
+
+    const loadGroups = async () => {
+      try {
+        const res = await fetch('/api/groups', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok) setGroups(data.groups);
+      } catch (err) {
+        console.error('โหลดกลุ่มไม่สำเร็จ:', err);
+      } finally {
+        setLoadingGroups(false);
+      }
+    };
+
+    loadGroups();
   }, []);
 
   const handleLogout = () => {
@@ -139,23 +152,40 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="space-y-2">
-          {MOCK_GROUPS.map((group) => (
+        {loadingGroups ? (
+          <div className="rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 text-center">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">กำลังโหลด...</p>
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 text-center">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-3">
+              ยังไม่มีกลุ่ม
+            </p>
             <Link
-              key={group.id}
-              href={`/groups/${group.id}`}
-              className="flex items-center justify-between rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4"
+              href="/groups/new"
+              className="inline-block rounded-md bg-black dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium"
             >
-              <div>
-                <p className="font-medium text-black dark:text-zinc-100">{group.name}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {group.memberCount} คน
-                </p>
-              </div>
-              <BalanceLabel amount={group.myBalance} />
+              สร้างกลุ่มแรกของคุณ
             </Link>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {groups.map((group) => (
+              <Link
+                key={group.id}
+                href={`/groups/${group.id}`}
+                className="flex items-center justify-between rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4"
+              >
+                <div>
+                  <p className="font-medium text-black dark:text-zinc-100">{group.name}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {group.member_count} คน
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
       </div>
     </div>
