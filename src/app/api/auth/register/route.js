@@ -4,8 +4,8 @@ import pool from '@/lib/db';
 
 export async function POST(request) {
   try {
-    const {name, email, password} = await request.json();
-
+    const {name, email: rawEmail, password} = await request.json();
+    const email = rawEmail?.trim().toLowerCase();
     //เช็คว่ากรอกครบไหม
     if (!name || !email || !password) {
       return NextResponse.json(

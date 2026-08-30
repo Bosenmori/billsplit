@@ -5,8 +5,8 @@ import pool from '@/lib/db';
 
 export async function POST(request) {
   try {
-    const { email, password } = await request.json();
-
+    const { email: rawEmail, password } = await request.json();
+    const email = rawEmail?.trim().toLowerCase();
     if (!email || !password) {
       return NextResponse.json(
         { status: 'error', message: 'กรุณากรอกอีเมลและรหัสผ่าน' },
