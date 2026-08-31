@@ -43,11 +43,12 @@ export async function GET (request, { params }){
         const members = memberResult.rows;
 
         // ต้องเป็นสมาชิกถึงจะดูได้
-        const isMember = members.some((m) => m.user_id === auth.userId);
-        if (!isMember) {
-        return NextResponse.json({message: 'คุณไม่ได้เป็นสมาชิกของกลุ่มนี้'},{ status: 403});}
+        const me = members.find((m) => m.user_id === auth.userId);
+        if (!me) {
+            return NextResponse.json({ message: 'คุณไม่ได้เป็นสมาชิกของกลุ่มนี้' }, { status: 403 });
+        }
+        return NextResponse.json({ group, members, myRole: me.role }, { status: 200 });
 
-        return NextResponse.json({group, members }, { status: 200 });
     } catch (error) {
         return NextResponse.json({message: "เกิดข้อผิดพลาด",error: error.message},{status:500})
     }

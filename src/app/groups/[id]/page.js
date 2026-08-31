@@ -7,9 +7,17 @@ import Link from 'next/link';
 export default function GroupDetailPage() {
   const params = useParams();
 
-  const [data, setData] = useState(null);
+  // ข้อมูลหลัก 
+  const [group, setGroup] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [myRole, setMyRole] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // ฟอร์มเชิญสมาชิก
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formResult, setFormResult] = useState(null);
 
   useEffect(() => {
     async function loadGroup() {
@@ -27,7 +35,9 @@ export default function GroupDetailPage() {
           return;
         }
 
-        setData(result);
+        setGroup(result.group);
+        setMembers(result.members);
+        setMyRole(result.myRole);
       } catch (err) {
         setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ');
       } finally {
@@ -38,6 +48,41 @@ export default function GroupDetailPage() {
     loadGroup();
   }, [params.id]);
 
+  const handleInvite = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setFormResult(null);
+
+    try {
+      const token = localStorage.getItem('token');
+
+      const res = await fetch(`/api/groups/${params.id}/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setFormResult({ ok: false, message: result.message || 'เชิญไม่สำเร็จ' });
+        return;
+      }
+
+      setMembers([...members, result.member]);
+      setEmail('');
+      setFormResult({ ok: true, message: result.message });
+    } catch (err) {
+      setFormResult({ ok: false, message: 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // สถานะกำลังโหลด 
   if (loading) {
     return (
       <main className="min-h-screen bg-zinc-50 p-6 dark:bg-black">
@@ -46,6 +91,7 @@ export default function GroupDetailPage() {
     );
   }
 
+  // สถานะ error
   if (error) {
     return (
       <main className="min-h-screen bg-zinc-50 p-6 dark:bg-black">
@@ -62,8 +108,7 @@ export default function GroupDetailPage() {
     );
   }
 
-  const { group, members } = data;
-
+  // หน้าปกติ 
   return (
     <main className="min-h-screen bg-zinc-50 p-6 dark:bg-black">
       <div className="mx-auto max-w-2xl">
@@ -119,6 +164,45 @@ export default function GroupDetailPage() {
             ))}
           </div>
         </section>
+
+        {/* ฟอร์มเชิญสมาชิก (เฉพาะ admin) */}
+        {myRole === 'admin' && (
+          <section className="mt-6">
+            <h2 className="mb-3 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              เชิญสมาชิก
+            </h2>
+
+            <form onSubmit={handleInvite} className="flex gap-2">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="email@example.com"
+                className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
+              />
+              <button
+                type="submit"
+                disabled={submitting}
+                className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+              >
+                {submitting ? 'กำลังเชิญ...' : 'เชิญ'}
+              </button>
+            </form>
+
+            {formResult && (
+              <p
+                className={`mt-2 text-sm ${
+                  formResult.ok
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}
+              >
+                {formResult.ok ? '✅' : '❌'} {formResult.message}
+              </p>
+            )}
+          </section>
+        )}
       </div>
     </main>
   );
