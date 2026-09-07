@@ -1,53 +1,37 @@
-import { NextResponse } from 'next/server';
-import bcrypt from 'bcrypt';
-import pool from '@/lib/db';
+
+import pool from "@/lib/db";
+import { NextResponse } from "next/server";
+import bcrypt from 'bcrypt'
 
 export async function POST(request) {
-  try {
-    const {name, email: rawEmail, password} = await request.json();
-    const email = rawEmail?.trim().toLowerCase();
-    //เช็คว่ากรอกครบไหม
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        {
-          status: 'error', message: 'กรอกชื่อ อีเมล และรหัสผ่าน'
-        },{status: 400}
-      );
+    try {
+        const body = await request.json();
+        const { email:rawEmail, name, password} = body
+        const email = rawEmail?.trim().toLowerCase();
+        if (!name || !rawEmail || !password) {
+            return NextResponse.json({message: 'กรอกชื่อ อีเมล และรหัสผ่าน'},{status: 400})
+        }
+    
+        const exist = await pool.query(`
+            SELECT id
+            FROM users
+            WHERE email = $1
+            `,[email])
+
+        if (exist.rowCount > 0){
+            return NextResponse.json({message: 'มีอีเมลนี้อยู่แล้ว'},{status: 401})
+        }
+        const passwordHash = await bcrypt.hash(password, 10);
+        
+        const result = await pool.query(`
+            INSERT INTO users (name, email, password_hash)
+            VALUES ($1, $2, $3)
+            RETURNING id, email
+            `,[name, email, passwordHash])
+
+            return NextResponse.json({message: 'สมัครสมาชิกสำเร็จ', user: result.rows[0]},{status:201})   
+    } catch (error) {
+        return NextResponse.json({message: error.message})
     }
-
-    //เช็คว่าอีเมลนี้เคยสมัครไปแล้วหรือยัง 
-    const existing = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
-    );
-    if (existing.rows.length > 0) {
-      return NextResponse.json(
-        {status: 'error', message: 'อีเมลนี้ถูกใช้สมัครไปแล้ว'
-        },{status: 409}
-      );
-    }
-
-    //เข้ารหัสรหัสผ่านก่อนเก็บ
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // บันทึกลง database
-    const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash)
-       VALUES ($1, $2, $3)
-       RETURNING id, name, email, created_at`, [name, email, passwordHash]
-    );
-
-    return NextResponse.json(
-      {
-        status: 'ok', message: 'สมัครสมาชิกสำเร็จ', user: result.rows[0]
-      },
-      {status: 201}
-    );
-  } catch (err) {
-    return NextResponse.json(
-      {
-        status: 'error', message: 'สมัครสมาชิกไม่สำเร็จ', error: err.message},
-      {status: 500}
-    );
-  }
+    
 }

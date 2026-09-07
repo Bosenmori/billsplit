@@ -1,9 +1,6 @@
 import { Pool } from 'pg';
 
-const globalForPg = globalThis;
-
-const pool =
-  globalForPg.pgPool ||
+const pool = globalThis.pgPool ||
   new Pool({
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -13,7 +10,9 @@ const pool =
   });
 
 if (process.env.NODE_ENV !== 'production') {
-  globalForPg.pgPool = pool;
+  globalThis.pgPool = pool;
 }
 
 export default pool;
+
+
