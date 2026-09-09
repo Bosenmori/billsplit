@@ -40,31 +40,16 @@ export default function Home(){
       </div>
     )
   }
-  //   if(checked){return(
-  //     <div className="flex bg-black min-h-screen justify-center items-center">
-  //       <div className="flex flex-col gap-y-2 items-center">
-  //         <h1 className="text-zinc-50 text-3xl">Bill Splitting App</h1>
-  //         <h2 className="text-zinc-400"> สวัสดี {user.stored.email}</h2>
-  //         <div>
-  //           <button
-  //           className="p-1 text-sm text-zinc-500"
-  //           onClick={handleLogout}
-            
-  //           >Logout</button>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   )
-  // }
+
   if (checked) { return(
     <div className="flex min-h-screen bg-black justify-center">
       <div className="w-full max-w-lg">
-            <div className="flex justify-between  mt-6">
+          {/* headers */}
+            <div className="flex justify-between  mt-6.5 mb-5">
               <div>
               <p className="text-zinc-50 ">สวัสดี</p>
               <h1 className="text-zinc-50">{' '}{user.stored.name}</h1>
               </div>
-              
               <button
                 className="text-zinc-50"
                 onClick={handleLogout}
@@ -72,9 +57,34 @@ export default function Home(){
                 ออกจากระบบ
               </button>
             </div>
+            
+          {/* สรุปยอด */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="rounded-lg bg-zinc-900  border-zinc-800 p-4">
+            <p className="text-xs text-zinc-400 mb-1">คุณต้องจ่าย</p>
+            <p className="text-2xl font-semibold text-red-600 dark:text-red-400">
+              ฿{0}
+            </p>
+          </div>
+          <div className="rounded-lg bg-zinc-900  border-zinc-800 p-4">
+            <p className="text-xs text-zinc-400 mb-1">คุณจะได้รับ</p>
+            <p className="text-2xl font-semibold text-green-400">
+              ฿{0}
+            </p>
+          </div>
+        </div>
 
+        {/* กลุ่ม */}
 
-          
+        <div className="mb-6">
+          <p className="text-zinc-400 mb-2">กลุ่มของฉัน</p>
+          <div className="w-full bg-zinc-900  border-zinc-800 p-5 rounded-lg mb-3">
+            <p className="text-zinc-400">ทริปชะอำ</p>
+          </div>
+          <div className="w-full bg-zinc-900  border-zinc-800 p-5 rounded-lg mb-3">
+            <p className="text-zinc-400">ค่าหอพัก</p>
+          </div>
+        </div>
       </div>
     </div>
 

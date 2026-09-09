@@ -38,8 +38,8 @@ export async function POST(request){
             {expiresIn: '7d'}
         )
 
-         return NextResponse.json({message: 'ถูกต้อง', user: result, token},{status: 201})
+         return NextResponse.json({message: 'เข้าสู่ระบบสำเร็จ', user: result, token},{status: 201})
     } catch (error) {
-        
+         return NextResponse.json({message: error.message},{status: 405}) 
     }
 } 

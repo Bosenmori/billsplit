@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from 'next/navigation';
+import Link from "next/link";
 export default function Login(){
     const router = useRouter();
     const [form, setForm] = useState({email: '', password: ''})
@@ -44,7 +45,10 @@ export default function Login(){
     return (
         <div className="flex bg-black justify-center items-center min-h-screen">
             <div className="w-full max-w-sm">
-                <h2 className="text-zinc-50 text-1xl font-semibold">Bill Splitting App</h2>
+                <Link 
+                className="text-zinc-50 text-1xl font-semibold"
+                href='/'
+                >Bill Splitting App</Link>
                 <h1 className="text-3xl text-zinc-50 mb-5 font-semibold">เข้าสู่ระบบ</h1>
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
@@ -91,7 +95,7 @@ export default function Login(){
                     {result && !result.ok &&(
                         <div className="bg-red-950 w-full p-2 rounded-sm ">
                             <p className="text-red-500">❌ เกิดข้อผิดพลาด</p>
-                            <p className="text-white">{result.data.message ?? 'เกิดข้อผิดพลาด'}</p>
+                            <p className="text-white">{result.data?.message ?? 'เกิดข้อผิดพลาด'}</p>
                         </div>
                     ) }
                 <div>

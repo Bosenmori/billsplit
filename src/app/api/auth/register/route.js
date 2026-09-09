@@ -31,7 +31,7 @@ export async function POST(request) {
 
             return NextResponse.json({message: 'สมัครสมาชิกสำเร็จ', user: result.rows[0]},{status:201})   
     } catch (error) {
-        return NextResponse.json({message: error.message})
+        return NextResponse.json({message: error.message},{status: 405})
     }
     
 }
