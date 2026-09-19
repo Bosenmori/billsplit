@@ -35,13 +35,25 @@ export async function GET(request) {
     if (!auth.success) {
         return NextResponse.json({message: auth.message},{status: 401})
     }
-   
-    // // const groupResult = await pool.query(`
-    // //     SELECT
-    // //     FROM groups g
-        
-    // //     `)
-
-
-    // return NextResponse.json({email: auth.email, userId: auth.userId}, {status: 201})
+     try {
+        const groupResult = await pool.query(`
+        SELECT 
+        g.id, 
+        g.name, 
+        g.created_at,
+        (
+            SELECT COUNT(*) 
+            FROM group_members 
+            WHERE group_id = g.id
+        )::int AS member_count
+        FROM groups g
+        JOIN group_members gm ON g.id = gm.group_id
+        WHERE gm.user_id = $1
+        ORDER BY g.created_at DESC
+            `,[auth.userId]);
+        return NextResponse.json({groups: groupResult.rows}, { status: 200});
+    } catch (error) {
+        return NextResponse.json({message: "ดึงข้อมูลไม่สำเร็จ", error: error.message},{ status: 500}
+);
+    }
 }
