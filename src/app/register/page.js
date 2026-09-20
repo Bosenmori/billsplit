@@ -35,7 +35,6 @@ export default function Register(){
     return (
         <div className="flex bg-black justify-center items-center min-h-screen">
             <div className="w-full max-w-sm">
-                {/* <h2 className="text-zinc-50 text-1xl font-semibold">Bill Splitting App</h2> */}
                 <Link 
                 className="text-zinc-50 text-1xl font-semibold"
                 href='/'
