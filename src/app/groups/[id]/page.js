@@ -4,8 +4,14 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
-
-const formatBaht = (value) => Number(value).toFixed(2);
+// value = amount_thb / share_amount ที่เก็บเป็นบาทเสมอใน DB
+// rate = null แปลว่าตอนนี้โชว์เป็น THB อยู่ (ไม่แปลง)
+function formatMoney(value, rate, currency) {
+    const num = Number(value);
+    const converted = rate ? num * rate : num;
+    const label = currency === 'THB' ? 'บาท' : currency;
+    return `${converted.toFixed(2)} ${label}`;
+}
 
 const formatDate = (value) =>
     new Date(value).toLocaleDateString('th-TH', {
@@ -25,16 +31,47 @@ export default function GroupDetailPage() {
     const [error, setError] = useState('');
     const [expensesError, setExpensesError] = useState('');
 
+    const [displayCurrency, setDisplayCurrency] = useState('THB');
+    const [rate, setRate] = useState(null);
+    const [rateLoading, setRateLoading] = useState(false);
+    const [rateError, setRateError] = useState('');
+
     // ฟอร์มเชิญสมาชิก
     const [email, setEmail] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [formResult, setFormResult] = useState(null);
+    useEffect(() => {
+        if (displayCurrency === 'THB') {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setRate(null); //ถ้าไม่มีก็กลับแสดงค่าเดิม
+            return;
+        }
+
+        async function fetchRate() {
+            setRateLoading(true);
+            setRateError('');
+            try {
+                const res = await fetch(
+                    `https://api.frankfurter.dev/v1/latest?from=THB&to=${displayCurrency}`
+                );
+                const data = await res.json();
+                setRate(data.rates[displayCurrency]);
+            } catch (err) {
+                setRateError('ดึงอัตราแลกเปลี่ยนไม่สำเร็จ');
+            } finally {
+                setRateLoading(false);
+            }
+        }
+
+        fetchRate();
+    }, [displayCurrency]);
+
 
     useEffect(() => {
         async function loadData() {
             try {
                 const token = localStorage.getItem('token');
-                const headers = { Authorization: `Bearer ${token}` };
+                const headers = {Authorization: `Bearer ${token}`};
 
 
                 const [groupRes, expensesRes] = await Promise.all([
@@ -67,6 +104,7 @@ export default function GroupDetailPage() {
 
         loadData();
     }, [params.id]);
+
 
     const handleInvite = async (e) => {
         e.preventDefault();
@@ -104,15 +142,15 @@ export default function GroupDetailPage() {
 
     if (loading) {
         return (
-            <main className="min-h-screen bg-black p-6">
+            <div className="min-h-screen bg-black p-6">
                 <p className="text-zinc-400">กำลังโหลด...</p>
-            </main>
+            </div>
         );
     }
 
     if (error) {
         return (
-            <main className="min-h-screen bg-black p-6">
+            <div className="min-h-screen bg-black p-6">
                 <div className="mx-auto max-w-2xl rounded-xl border border-zinc-800 bg-zinc-900 p-6">
                     <p className="text-red-400">{error}</p>
                     <Link
@@ -122,13 +160,13 @@ export default function GroupDetailPage() {
                         กลับหน้าแรก
                     </Link>
                 </div>
-            </main>
+            </div>
         );
     }
-    
+
     //หน้าปดติ
     return (
-        <main className="min-h-screen bg-black p-6">
+        <div className="min-h-screen bg-black p-6">
             <div className="mx-auto max-w-2xl">
                 <Link href="/" className="text-sm text-zinc-400 hover:text-zinc-50">
                     ← กลับ
@@ -204,7 +242,7 @@ export default function GroupDetailPage() {
                                             </p>
                                         </div>
                                         <p className="whitespace-nowrap font-semibold text-zinc-50">
-                                            {formatBaht(expense.amount_thb)} บาท
+                                            {formatMoney(expense.amount_thb, rate, displayCurrency)}
                                         </p>
                                     </div>
 
@@ -215,7 +253,7 @@ export default function GroupDetailPage() {
                                                 className="flex justify-between text-sm text-zinc-400"
                                             >
                                                 <span>{split.name}</span>
-                                                <span>{formatBaht(split.share_amount)} บาท</span>
+                                                <span>{formatMoney(split.share_amount, rate, displayCurrency)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -225,6 +263,22 @@ export default function GroupDetailPage() {
                     )}
                 </section>
 
+                <div className="mb-3 flex items-center gap-2 text-sm">
+                    <span className="text-zinc-400">แสดงเป็น:</span>
+                    <select
+                        value={displayCurrency}
+                        onChange={(e) => setDisplayCurrency(e.target.value)}
+                        className="rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-50"
+                    >
+                        <option value="THB">THB</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="JPY">JPY</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                    {rateLoading && <span className="text-zinc-500">กำลังโหลดอัตรา...</span>}
+                    {rateError && <span className="text-red-400">{rateError}</span>}
+                </div>
                 {/* เชิญสมาชิก */}
                 {myRole === 'admin' && (
                     <section className="mt-6">
@@ -259,6 +313,6 @@ export default function GroupDetailPage() {
                     </section>
                 )}
             </div>
-        </main>
+        </div>
     );
 }
