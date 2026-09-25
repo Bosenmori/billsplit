@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 
-// แบ่งเงินเป็นสตางค์เพื่อให้ผลรวมตรงกับยอดรายจ่าย
+// แบ่งเงินเท่ากันเป็นสตางค์เพื่อให้ผลรวมตรงกับยอดรายจ่าย
 function calculateEqualSplits(amount, memberIds) {
     const totalSatang = Math.round(Number(amount) * 100);
     const n = memberIds.length;
@@ -19,8 +19,50 @@ function calculateEqualSplits(amount, memberIds) {
     }));
 }
 
-const inputClass =
-    'w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-400';
+// แปลง % (string จาก input) เป็นหน่วยย่อย เช่น "33.33" → 3333 (100% = 10000)
+function toBasisPoints(percent) {
+    return Math.round(Number(percent || 0) * 100);
+}
+
+// แบ่งเงินตาม % — ใช้ได้เมื่อ % รวมกันได้ 100 พอดีเท่านั้น (เช็คก่อนเรียก)
+function calculatePercentSplits(amount, memberIds, percentages) {
+    const totalSatang = Math.round(Number(amount) * 100);
+    const bps = memberIds.map((id) => toBasisPoints(percentages[id]));
+
+    // ปัดลงก่อนทุกคน
+    const shares = bps.map((bp) => Math.floor((totalSatang * bp) / 10000));
+
+    // สตางค์ที่หายไปจากการปัดลง แจกให้คนแรกๆ ที่มี % มากกว่า 0 คนละ 1 สตางค์
+    let remainder = totalSatang - shares.reduce((sum, s) => sum + s, 0);
+    for (let i = 0; i < shares.length && remainder > 0; i++) {
+        if (bps[i] > 0) {
+            shares[i] += 1;
+            remainder -= 1;
+        }
+    }
+
+    return memberIds.map((userId, index) => ({
+        userId,
+        shareAmount: shares[index] / 100,
+    }));
+}
+
+// เติม % เท่ากันให้ทุกคน เช่น 3 คน → { 1: "33.34", 2: "33.33", 3: "33.33" }
+function equalPercentages(memberIds) {
+    const n = memberIds.length;
+    if (n === 0) return {};
+
+    const base = Math.floor(10000 / n);
+    const remainder = 10000 % n;
+
+    const result = {};
+    memberIds.forEach((id, index) => {
+        result[id] = String((base + (index < remainder ? 1 : 0)) / 100);
+    });
+    return result;
+}
+
+const inputClass = 'w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-400';
 
 const labelClass = 'mb-1 block text-sm font-medium text-zinc-300';
 
@@ -41,6 +83,8 @@ export default function NewExpensePage() {
         expenseDate: new Date().toISOString().slice(0, 10),
         paidBy: '',
         selectedMemberIds: [],
+        splitMode: 'equal',   // 'equal' | 'percent'
+        percentages: {},      // { [userId]: "33.33" }
     }));
 
     const [submitting, setSubmitting] = useState(false);
@@ -87,22 +131,76 @@ export default function NewExpensePage() {
     function handleChange(e) {
         const { name, value } = e.target;
 
-        setForm((prev) => ({...prev,
+        setForm((prev) => ({
+            ...prev,
             [name]: value,
         }));
     }
 
     // Checkbox อัปเดต array ภายใน form
+    // ถ้าอยู่โหมด % จะเติม % เท่ากันใหม่ให้คนที่ถูกเลือก (คนเข้า-ออก % เดิมใช้ไม่ได้แล้ว)
     function toggleMember(memberId) {
-        setForm((prev) => ({...prev,
-            selectedMemberIds: prev.selectedMemberIds.includes(memberId)
+        setForm((prev) => {
+            const selectedMemberIds = prev.selectedMemberIds.includes(memberId)
                 ? prev.selectedMemberIds.filter((id) => id !== memberId)
-                : [...prev.selectedMemberIds, memberId],
+                : [...prev.selectedMemberIds, memberId];
+
+            return {
+                ...prev,
+                selectedMemberIds,
+                percentages:
+                    prev.splitMode === 'percent'
+                        ? equalPercentages(selectedMemberIds)
+                        : prev.percentages,
+            };
+        });
+    }
+
+    // สลับวิธีหาร — เข้าโหมด % ครั้งแรกให้เริ่มจาก % เท่ากัน
+    function changeSplitMode(mode) {
+        setForm((prev) => ({
+            ...prev,
+            splitMode: mode,
+            percentages:
+                mode === 'percent'
+                    ? equalPercentages(prev.selectedMemberIds)
+                    : prev.percentages,
         }));
     }
 
-    const previewSplits =form.amount && form.selectedMemberIds.length > 0 ? 
-    calculateEqualSplits(form.amount, form.selectedMemberIds) : [];
+    // แก้ % ของคนเดียว โดยเก็บของคนอื่นไว้
+    function handlePercentChange(userId, value) {
+        setForm((prev) => ({
+            ...prev,
+            percentages: { ...prev.percentages, [userId]: value },
+        }));
+    }
+
+    // % รวมของคนที่เลือก (หน่วยย่อย) ใช้ทั้งตอนแสดงผลและตอนเช็คก่อน submit
+    const totalBasisPoints = form.selectedMemberIds.reduce(
+        (sum, id) => sum + toBasisPoints(form.percentages[id]),
+        0
+    );
+    const percentIsValid = totalBasisPoints === 10000;
+
+    // คำนวณ splits ตามโหมดที่เลือก
+    function buildSplits(amount) {
+        if (form.splitMode === 'percent') {
+            return calculatePercentSplits(
+                amount,
+                form.selectedMemberIds,
+                form.percentages
+            );
+        }
+        return calculateEqualSplits(amount, form.selectedMemberIds);
+    }
+
+    const canPreview =
+        form.amount &&
+        form.selectedMemberIds.length > 0 &&
+        (form.splitMode === 'equal' || percentIsValid);
+
+    const previewSplits = canPreview ? buildSplits(form.amount) : [];
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -115,6 +213,8 @@ export default function NewExpensePage() {
             expenseDate,
             paidBy,
             selectedMemberIds,
+            splitMode,
+            percentages,
         } = form;
 
         if (title.trim() === '') {
@@ -124,7 +224,7 @@ export default function NewExpensePage() {
 
         const amountNum = Number(amount);
 
-        if (amountNum <= 0) {
+        if (!Number.isFinite(amountNum) || amountNum <= 0) {
             setSubmitError('จำนวนเงินต้องมากกว่า 0');
             return;
         }
@@ -132,6 +232,21 @@ export default function NewExpensePage() {
         if (selectedMemberIds.length === 0) {
             setSubmitError('ต้องเลือกอย่างน้อย 1 คนที่ร่วมจ่าย');
             return;
+        }
+
+        if (splitMode === 'percent') {
+            // backend ไม่รับ shareAmount = 0 เลยต้องให้ทุกคนที่เลือกมี % มากกว่า 0
+            const hasZero = selectedMemberIds.some(
+                (id) => toBasisPoints(percentages[id]) <= 0
+            );
+            if (hasZero) {
+                setSubmitError('ทุกคนที่เลือกต้องมี % มากกว่า 0 (ถ้าไม่ร่วมจ่ายให้เอาเครื่องหมายถูกออก)');
+                return;
+            }
+            if (!percentIsValid) {
+                setSubmitError(`% รวมต้องได้ 100 (ตอนนี้ ${totalBasisPoints / 100}%)`);
+                return;
+            }
         }
 
         setSubmitting(true);
@@ -151,7 +266,7 @@ export default function NewExpensePage() {
                     category: category.trim() || 'other',
                     amount: amountNum,
                     expenseDate,
-                    splits: calculateEqualSplits(amountNum, selectedMemberIds),
+                    splits: buildSplits(amountNum),
                 }),
             });
 
@@ -267,24 +382,79 @@ export default function NewExpensePage() {
                         </select>
                     </div>
 
+                    {/* เลือกวิธีหาร */}
+                    <div>
+                        <label className={labelClass}>วิธีหาร</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { value: 'equal', label: 'หารเท่ากัน' },
+                                { value: 'percent', label: 'หารตาม %' },
+                            ].map((option) => (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => changeSplitMode(option.value)}
+                                    className={`rounded-md border py-2 text-sm ${form.splitMode === option.value
+                                        ? 'border-white bg-white text-black'
+                                        : 'border-zinc-700 bg-zinc-800 text-zinc-300'
+                                        }`}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div>
                         <label className={labelClass}>ใครร่วมจ่ายรายการนี้บ้าง</label>
                         <div className="space-y-2 rounded-md border border-zinc-800 bg-zinc-900 p-3">
-                            {members.map((m) => (
-                                <label
-                                    key={m.user_id}
-                                    className="flex items-center gap-2 text-sm text-zinc-200"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={form.selectedMemberIds.includes(m.user_id)}
-                                        onChange={() => toggleMember(m.user_id)}
-                                        className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
-                                    />
-                                    {m.name}
-                                </label>
-                            ))}
+                            {members.map((m) => {
+                                const isSelected = form.selectedMemberIds.includes(m.user_id);
+
+                                return (
+                                    <div
+                                        key={m.user_id}
+                                        className="flex items-center justify-between gap-2"
+                                    >
+                                        <label className="flex items-center gap-2 text-sm text-zinc-200">
+                                            <input
+                                                type="checkbox"
+                                                checked={isSelected}
+                                                onChange={() => toggleMember(m.user_id)}
+                                                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
+                                            />
+                                            {m.name}
+                                        </label>
+
+                                        {form.splitMode === 'percent' && isSelected && (
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    type="number"
+                                                    min="0.01"
+                                                    max="100"
+                                                    step="0.01"
+                                                    value={form.percentages[m.user_id] ?? ''}
+                                                    onChange={(e) =>
+                                                        handlePercentChange(m.user_id, e.target.value)
+                                                    }
+                                                    className="w-20 rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-right text-sm text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                                                />
+                                                <span className="text-sm text-zinc-400">%</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
+
+                        {form.splitMode === 'percent' && form.selectedMemberIds.length > 0 && (
+                            <p
+                                className={`mt-2 text-sm ${percentIsValid ? 'text-green-400' : 'text-red-400'
+                                    }`}
+                            >
+                                รวม {totalBasisPoints / 100}% {percentIsValid ? '✓' : '(ต้องได้ 100%)'}
+                            </p>
+                        )}
                     </div>
 
                     {previewSplits.length > 0 && (

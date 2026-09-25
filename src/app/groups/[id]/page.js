@@ -242,7 +242,7 @@ export default function GroupDetailPage() {
                                             </p>
                                         </div>
                                         <p className="whitespace-nowrap font-semibold text-zinc-50">
-                                            {formatMoney(expense.amount_thb, rate, displayCurrency)}
+                                            {formatMoney(expense.amount, rate, displayCurrency)}
                                         </p>
                                     </div>
 

@@ -132,12 +132,10 @@ export async function POST(request) {
 
         const expenseResult = await client.query(
             `INSERT INTO expenses
-            (group_id, paid_by, title, category, currency,
-            original_amount, amount_thb, exchange_rate, expense_date)
-        VALUES ($1, $2, $3, $4, 'THB', $5, $5, NULL, COALESCE($6::date, CURRENT_DATE))
-        RETURNING id, group_id, paid_by, title, category, currency,
-                    original_amount, amount_thb, expense_date, created_at`,
-            [groupIdNum, paidByNum, title.trim(), categoryValue, amountNum, expenseDateValue]
+            (group_id, paid_by, title, category, amount, expense_date)
+        VALUES ($1, $2, $3, $4, $5, COALESCE($6::date, CURRENT_DATE))
+        RETURNING id, group_id, paid_by, title, category, amount, expense_date, created_at`,
+            [groupIdNum, paidByNum, title.trim(), categoryValue ?? 'other', amountNum, expenseDateValue]
         );
 
         const expense = expenseResult.rows[0];
@@ -178,7 +176,7 @@ export async function GET(request) {
         return NextResponse.json({ message: auth.message }, { status: 401 });
     }
     try {
-        const { searchParams } = new URL(request.url);
+        const {searchParams} = new URL(request.url);
         //console.log(searchParams.get('groupId'))
         const groupIdNum = Number(searchParams.get('groupId'));
 
@@ -250,9 +248,7 @@ export async function GET(request) {
 
         const result = await pool.query(
             `SELECT
-            e.id, e.title, e.category, e.currency,
-            e.original_amount, e.amount_thb, e.exchange_rate,
-            e.expense_date, e.created_at,
+            e.id, e.title, e.category, e.amount, e.expense_date, e.created_at,
             e.paid_by, u.name AS paid_by_name,
             COALESCE(
             json_agg(
