@@ -34,20 +34,6 @@ export async function POST(request, {params}) {
         if (groupResult.rowCount === 0) {
             return NextResponse.json({message: 'ไม่พบกลุ่มนี้'}, {status: 404});
         }
-        //คนที่ขอเชิญมีสิทธิ์เช็ญมั้ย
-        const requesterResult = await pool.query(`
-            SELECT role
-            FROM group_members
-            WHERE group_id = $1 AND user_id = $2
-            `,[groupId,auth.userId])
-        
-        if (requesterResult === 0) {
-            return NextResponse.json({message: 'คุณไม่ได้เป็นสมาชิกของกลุ่มนี้'},{status: 403 });
-        }
-
-        if (requesterResult.rows[0].role !== 'admin') {
-            return NextResponse.json({message: 'เฉพาะแอดมินเท่านั้นที่เชิญสมาชิกได้'},{status: 403 });
-        }
 
         //หาผู้ใช้จากemail
         const targetUserResult =  await pool.query(`
