@@ -141,7 +141,7 @@ export default function GroupDetailPage() {
     return (
         <div className="min-h-screen bg-black p-6">
             <div className="mx-auto max-w-2xl">
-                <Link href="/" className="text-sm text-zinc-400 hover:text-zinc-50">
+                <Link href="/home" className="text-sm text-zinc-400 hover:text-zinc-50">
                     ← กลับ
                 </Link>
 

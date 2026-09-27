@@ -43,7 +43,7 @@ export default function NewGroupPage() {
         {/* Header */}
         <div className="mb-6">
           <Link
-            href="/"
+            href="/home"
             className="text-sm text-zinc-400 mb-2 inline-block"
           > ← กลับ
           </Link>
