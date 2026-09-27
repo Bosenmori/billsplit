@@ -1,21 +1,20 @@
 import jwt from 'jsonwebtoken';
-
-export function verifyAuth(request) {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-        return {message: 'ไม่พบtoken', success: false};
-    } 
-
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-        return {message: 'รูปแบบtokenไม่ถูกต้อง', success: false};
-    }
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        return {userId: decoded.userId,email: decoded.email, success: true}
-
-    } catch (error) {
-        return {message: 'token ไม่ถูกต้องหรือหมดอายุ', success: false, error: error.message}
-    }
+ 
+export function verifyToken(token) {
+  if (!token) {
+    return { success: false, message: 'ไม่พบ token กรุณาเข้าสู่ระบบ' };
+  }
+ 
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    return { success: true, userId: decoded.userId, email: decoded.email };
+  } catch (error) {
+    return { success: false, message: 'token ไม่ถูกต้องหรือหมดอายุ', error: error.message };
+  }
 }
+ 
+export function verifyAuth(request) {
+  const token = request.cookies.get('token')?.value;
+  return verifyToken(token);
+}
+ 

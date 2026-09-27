@@ -27,10 +27,9 @@ export default function Login(){
             const data = await res.json();
             setResult({ok: res.ok, data});
             if (res.ok) {
-                localStorage.setItem('token', data.token)
                 localStorage.setItem('user', JSON.stringify(data.user))
                 setTimeout(() => {
-                    router.push('/');
+                    router.push('/home');
                 }, 800);
             }
            

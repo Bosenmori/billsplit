@@ -30,10 +30,7 @@ export default function NewExpensePage() {
     useEffect(() => {
         async function fetchGroup() {
             try {
-                const token = localStorage.getItem('token');
-                const res = await fetch(`/api/groups/${groupId}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                const res = await fetch(`/api/groups/${groupId}`,);
                 const data = await res.json();
 
                 if (!res.ok) {
@@ -128,13 +125,9 @@ export default function NewExpensePage() {
         }
         setSubmitting(true);
         try {
-            const token = localStorage.getItem('token');
             const res = await fetch('/api/expenses', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: {'Content-Type': 'application/json',},
                 body: JSON.stringify({
                     groupId: Number(groupId),
                     paidBy: Number(paidBy),

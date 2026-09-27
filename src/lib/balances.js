@@ -97,6 +97,5 @@ export async function calculateGroupBalances(groupId) {
         name: row.name,
         net: nets.get(row.user_id) / 100,
     }));
-
     return { balances, transactions };
 }

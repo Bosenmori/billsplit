@@ -41,7 +41,6 @@ export default function Home() {
     }, [moneyType]);
 
     useEffect(() => {
-        const token = localStorage?.getItem('token');
         const user = JSON.parse(localStorage.getItem('user'))
 
         const loadData = async () => {
@@ -49,10 +48,9 @@ export default function Home() {
                 if (user) {
                     setUser(user)
                 }
-                const headers = { Authorization: `Bearer ${token}` };
                 const [groupReply, summaryReply] = await Promise.all([
-                    fetch('/api/groups/', { headers }),
-                    fetch('/api/summary/', { headers }),
+                    fetch('/api/groups/'),
+                    fetch('/api/summary/'),
                 ])
                 const groupData = await groupReply.json()
                 const summaryData = await summaryReply.json()
@@ -73,8 +71,8 @@ export default function Home() {
 
         loadData();
     }, [])
-    function handleLogout() {
-        localStorage.removeItem('token');
+    async function handleLogout() {
+        await fetch('/api/auth/logout', {method: 'POST'})
         localStorage.removeItem('user');
         router.push('/login');
     }
@@ -122,7 +120,7 @@ export default function Home() {
                     <div className="rounded-lg bg-zinc-900  border-zinc-800 p-4">
                         <p className="text-xs text-zinc-400 mb-1">คุณจะได้รับ</p>
                         <p className="text-2xl font-semibold text-green-400">
-                            {formatMoney(summary.toRecive ?? 0, rate, moneyType)}
+                            {formatMoney(summary.toReceive ?? 0, rate, moneyType)}
                         </p>
                     </div>
                 </div>

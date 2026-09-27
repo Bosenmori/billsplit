@@ -15,25 +15,17 @@ export default function NewGroupPage() {
     setLoading(true);
     setError(null);
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
 
     try {
       const res = await fetch('/api/groups', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: {'Content-Type': 'application/json',},
         body: JSON.stringify({ name }),
       });
       const data = await res.json();
 
       if (res.ok) {
-        router.push('/');
+        router.push('/home');
       } else {
         setError(data.message || 'สร้างกลุ่มไม่สำเร็จ');
       }

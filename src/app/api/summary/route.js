@@ -64,7 +64,7 @@ export async function GET(request) {
         }
         const summary = {
                 toPay: totalPay / 100,
-                toRecive: totalRecive / 100,
+                toReceive: totalRecive / 100,
             }
              return NextResponse.json({summary: summary, actions: actions},{status: 200});
 

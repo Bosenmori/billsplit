@@ -51,14 +51,12 @@ export default function GroupDetailPage() {
     useEffect(() => {
         async function loadData() {
             try {
-                const token = localStorage.getItem('token');
-                const headers = { Authorization: `Bearer ${token}` };
                 setMe(JSON.parse(localStorage.getItem('user')));
 
                 const [groupReply, expenseReply, balancesReply] = await Promise.all([
-                    fetch(`/api/groups/${params.id}`, { headers }),
-                    fetch(`/api/expenses?groupId=${params.id}`, { headers }),
-                    fetch(`/api/balances?groupId=${params.id}`, { headers })
+                    fetch(`/api/groups/${params.id}`,),
+                    fetch(`/api/expenses?groupId=${params.id}`,),
+                    fetch(`/api/balances?groupId=${params.id}`,)
                 ]);
 
                 const groupData = await groupReply.json();
@@ -96,14 +94,9 @@ export default function GroupDetailPage() {
         setInviteResult(null);
 
         try {
-            const token = localStorage.getItem('token');
-
             const res = await fetch(`/api/groups/${params.id}/members`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: {'Content-Type': 'application/json',},
                 body: JSON.stringify({ email }),
             });
             const result = await res.json();
@@ -134,7 +127,7 @@ export default function GroupDetailPage() {
                 <div className="mx-auto max-w-2xl rounded-xl border border-zinc-800 bg-zinc-900 p-6">
                     <p className="text-red-400">{error}</p>
                     <Link
-                        href="/"
+                        href="/home"
                         className="mt-4 inline-block rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
                     >
                         กลับหน้าแรก

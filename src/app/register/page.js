@@ -16,13 +16,10 @@ export default function Register(){
         setLoading(true)
         setResult(null)
         try {
-            const res = await fetch('http://localhost:3000/api/auth/register',
-                {
+            const res = await fetch('http://localhost:3000/api/auth/register',{
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(form),
-                }
-            );
+                    body: JSON.stringify(form), });
             const data = await res.json();
             setResult({ok: res.ok, data});
         } catch (error) {
@@ -90,13 +87,13 @@ export default function Register(){
                 </form>
                  {result && result.ok &&(
                         <div className="bg-green-950 w-full p-2 rounded-sm">
-                            <p className=" text-green-500 ">✅ สมัครสมาชิกสำเร็จ</p>
+                            <p className=" text-green-500 ">สมัครสมาชิกสำเร็จ</p>
                             <p className=" text-white">userId:{' '}{result.data.user?.id} email:{' '}{result.data.user?.email}</p>
                         </div>
                     ) }
                     {result && !result.ok &&(
                         <div className="bg-red-950 w-full p-2 rounded-sm ">
-                            <p className="text-red-500">❌ เกิดข้อผิดพลาด</p>
+                            <p className="text-red-500">เกิดข้อผิดพลาด</p>
                             <p className="text-white">{result.data.message ?? 'เกิดข้อผิดพลาด'}</p>
                         </div>
                     ) }

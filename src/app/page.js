@@ -1,8 +1,8 @@
 'use client'
-
 import Link from "next/link"
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+
 
 
 
@@ -11,7 +11,7 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const user = JSON.parse(localStorage.getItem('user'))
+      const user = (JSON.parse(localStorage.getItem('user')) ?? undefined)
       if (user) {
         router.push('/home')
       }

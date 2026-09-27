@@ -3,43 +3,55 @@ import bcrypt from 'bcrypt';
 import pool from "@/lib/db";
 import jwt from 'jsonwebtoken';
 
-export async function POST(request){
+export async function POST(request) {
     try {
         const body = await request.json();
-        const {email:rawEmail, password} = body;
-        
+        const { email: rawEmail, password } = body;
+
         if (!rawEmail || !password) {
-            return NextResponse.json({message: 'ใส่อีเมลและรหัสผ่าน'}, {status: 400})
+            return NextResponse.json({ message: 'ใส่อีเมลและรหัสผ่าน' }, { status: 400 })
         }
         const email = rawEmail.trim().toLowerCase();
-        
+
         const exist = await pool.query(`
             SELECT password_hash, id, email, name
             FROM users
             WHERE email = $1
-            `,[email])
-        
+            `, [email])
+
         if (exist.rowCount === 0) {
-            return NextResponse.json({message: 'ไม่มีอีเมลนี้'}, {status: 402})
-         } 
-         
+            return NextResponse.json({ message: 'ไม่มีอีเมลนี้' }, { status: 402 })
+        }
+
         const passwordHash = exist.rows[0].password_hash;
 
         const matchPassword = await bcrypt.compare(password, passwordHash);
-         if (!matchPassword) {
-            return NextResponse.json({message: 'รหัสผ่านไม่ถูกต้อง'},{status: 401})
-         }
+        if (!matchPassword) {
+            return NextResponse.json({ message: 'รหัสผ่านไม่ถูกต้อง' }, { status: 401 })
+        }
 
-        const result = {id: exist.rows[0].id, email: exist.rows[0].email, name: exist.rows[0].name}
+        const result = { id: exist.rows[0].id, email: exist.rows[0].email, name: exist.rows[0].name }
 
+        const token_age = 60 * 60 * 24 * 7;
         const token = jwt.sign(
-            {userId: result.id, email: result.email, name: result.name},
+            {userId: result.id, email: result.email, name: result.name },
             process.env.JWT_SECRET,
-            {expiresIn: '7d'}
+            {expiresIn: token_age }
         )
+        const response = NextResponse.json(
+            {status: 'ok',message: 'เข้าสู่ระบบสำเร็จ',user: {id: result.id, email: result.email, name: result.name},},{status: 200}
+        );
 
-         return NextResponse.json({message: 'เข้าสู่ระบบสำเร็จ', user: result, token},{status: 201})
+        response.cookies.set('token', token, {
+            httpOnly: true,                                  
+            sameSite: 'lax',                                 
+            secure: process.env.NODE_ENV === 'production',   
+            path: '/',                                       
+            maxAge: token_age,                       
+        });
+
+        return response;
     } catch (error) {
-         return NextResponse.json({message: error.message},{status: 405}) 
+        return NextResponse.json({ message: error.message }, { status: 405 })
     }
 } 
