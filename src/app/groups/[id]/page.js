@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDate, formatMoney } from '@/lib/format';
 
 export default function GroupDetailPage() {
     const params = useParams();
 
+    const router = useRouter();
     const [group, setGroup] = useState(null);
     const [members, setMembers] = useState([]);
     const [myRole, setMyRole] = useState('');
@@ -25,7 +26,7 @@ export default function GroupDetailPage() {
     const [balances, setBalances] = useState([]);
     const [transactions, setTransactions] = useState([]);
     const [me, setMe] = useState(null);
-
+    const [reload, setReload] = useState(0);
     useEffect(() => {
         if (moneyType === 'THB') {
             // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -46,7 +47,7 @@ export default function GroupDetailPage() {
             }
         }
         fetchRate();
-    },[moneyType]);
+    }, [moneyType]);
 
     useEffect(() => {
         async function loadData() {
@@ -84,10 +85,51 @@ export default function GroupDetailPage() {
                 setLoading(false);
             }
         }
-
         loadData();
-    }, [params.id]);
+    }, [params.id, reload]);
 
+    const handleGroupDelete = async () => {
+        try {
+            if (myRole !== 'admin') {
+                return;
+            }
+            const confirmed = window.confirm("ยันยันที่จะลบกลุ่มนี้");
+            if (!confirmed) {
+                return;
+            }
+            const deleteReply = await fetch(`/api/groups?groupId=${params.id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', }
+            })
+            if (deleteReply.ok) {
+                router.push('/home')
+            }
+        } catch (error) {
+            console.log(error)
+        }
+    }
+    const handleDeleteExpense = async (id, title) => {
+        try {
+            if (myRole !== 'admin') {
+                window.alert('คุณไม่ใช่admin')
+                return;
+            }
+            const confirmed = window.confirm(`ยืนยันที่จะบบ ${title}`);
+            if (!confirmed) {
+                window.alert("hello")
+                return;
+            }
+            const deleteReply = await fetch(`/api/expenses?expenseId=${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', }
+            })
+            if (deleteReply.ok) {
+                setReload((prev) => prev + 1)
+            }
+        } catch (error) {
+            console.log(error)
+        }
+    }
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSending(true);
@@ -96,7 +138,7 @@ export default function GroupDetailPage() {
         try {
             const res = await fetch(`/api/groups/${params.id}/members`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json',},
+                headers: { 'Content-Type': 'application/json', },
                 body: JSON.stringify({ email }),
             });
             const result = await res.json();
@@ -200,13 +242,14 @@ export default function GroupDetailPage() {
                     ) : (
                         <div className="space-y-3">
                             {expenses.map((expense) => (
-                                <div
+                                <button
                                     key={expense.id}
-                                    className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+                                    onClick={() => { handleDeleteExpense(expense.id, expense.title) }}
+                                    className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 hover:border-red-400/40 w-full"
                                 >
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
-                                            <p className="font-medium text-zinc-50">{expense.title}</p>
+                                            <p className="font-medium text-zinc-50 text-left">{expense.title}</p>
                                             <p className="mt-0.5 text-sm text-zinc-400">
                                                 {expense.category && <>{expense.category} · </>}
                                                 จ่ายโดย {expense.paid_by_name} · {formatDate(expense.expense_date)}
@@ -227,7 +270,7 @@ export default function GroupDetailPage() {
                                             </div>
                                         ))}
                                     </div>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     )}
@@ -280,17 +323,18 @@ export default function GroupDetailPage() {
                                         <div
                                             key={`${t.from_user_id}-${t.to_user_id}`}
                                             className={`mb-2 flex items-center gap-2 rounded-lg border p-3 
-                                                ${isME ? 'border-red-400/40':'border-zinc-800'}`}
+                                                ${isME ? 'border-red-400/40' : 'border-zinc-800'}`}
                                         >
                                             <div className='flex-1'>
                                                 <p className='text-zinc-50'>{t.from_name} → {t.to_name}</p>
                                             </div>
                                             <p className={`font-semibold t
-                                            ${isME ? 'text-red-400':'text-zinc-50'}`   
+                                            ${isME ? 'text-red-400' : 'text-zinc-50'}`
                                             } >
                                                 {formatMoney(t.amount, rate, moneyType)}</p>
                                         </div>
-                                    )})}
+                                    )
+                                })}
                             </div>)}
                     </div>
                 </div>
@@ -340,6 +384,16 @@ export default function GroupDetailPage() {
                                 {inviteResult.ok ? '✅' : '❌'} {inviteResult.message}
                             </p>
                         )}
+                    </div>
+                )}
+
+                {myRole === 'admin' && (
+                    <div className='items-end mt-4'>
+                        <button
+                            onClick={handleGroupDelete}
+                            className='p-2 bg-red-500 rounded-2xl text-zinc-50'>
+                            ลบกลุ่มนี้
+                        </button>
                     </div>
                 )}
             </div>

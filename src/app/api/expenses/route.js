@@ -66,7 +66,7 @@ export async function POST(request) {
         let expenseDateValue = null; // null = ให้ DB ใช้ CURRENT_DATE
         if (expenseDate) {
             if (Number.isNaN(new Date(expenseDate).getTime())) {
-                return NextResponse.json({message: 'รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)' },{status: 400 }
+                return NextResponse.json({ message: 'รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)' }, { status: 400 }
                 );
             }
             expenseDateValue = expenseDate;
@@ -124,7 +124,7 @@ export async function GET(request) {
         return NextResponse.json({ message: auth.message }, { status: 401 });
     }
     try {
-        const {searchParams} = new URL(request.url);
+        const { searchParams } = new URL(request.url);
         //console.log(searchParams.get('groupId'))
         const groupIdNum = Number(searchParams.get('groupId'));
 
@@ -155,9 +155,32 @@ export async function GET(request) {
         ORDER BY e.expense_date DESC, e.id DESC`,
             [groupIdNum]);
 
-        return NextResponse.json({expenses: result.rows }, {status: 200});
+        return NextResponse.json({ expenses: result.rows }, { status: 200 });
 
     } catch (error) {
-        return NextResponse.json({message: 'เกิดข้อผิดพลาดในการดึงรายจ่าย', error: error.message }, {status: 500 });
+        return NextResponse.json({ message: 'เกิดข้อผิดพลาดในการดึงรายจ่าย', error: error.message }, { status: 500 });
     }
+}
+
+export async function DELETE(request) {
+    const auth = verifyAuth(request);
+    if (!auth.success) {
+        return NextResponse.json({ message: auth.message }, { status: 401 });
+    }
+    const expenseId = Number(new URL(request.url).searchParams.get('expenseId'))
+    const result = await pool.query(
+        `DELETE FROM expenses
+             WHERE id = $1
+               AND group_id IN (
+                   SELECT group_id
+                   FROM group_members
+                   WHERE user_id = $2
+               )
+             RETURNING id`,
+        [expenseId, auth.userId]
+    );
+    if (result.rowCount === 0) {
+        return NextResponse.json({message: 'ไม่พบรายจ่าย หรือไม่มีสิทธิ์ลบรายจ่ายนี้'},{status: 404})
+    }
+    return NextResponse.json({message: 'ลบรายจ่ายสำเร็จ'},{status: 200})
 }

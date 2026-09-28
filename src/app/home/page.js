@@ -182,7 +182,7 @@ export default function Home() {
                                     href={`/groups/${group.id}`}
                                     className="flex items-center justify-between rounded-lg bg-zinc-900 borderdark:border-zinc-800 p-4"
                                 >
-                                    <div >
+                                    <div className="flex-1">
                                         <p className="font-medium text-zinc-100">{group.name}</p>
                                         <p className="text-xs text-zinc-400">
                                             {group.member_count} คน
