@@ -114,9 +114,8 @@ export default function GroupDetailPage() {
                 window.alert('คุณไม่ใช่admin')
                 return;
             }
-            const confirmed = window.confirm(`ยืนยันที่จะบบ ${title}`);
+            const confirmed = window.confirm(`ยืนยันที่จะลบ ${title} ออกจากรายจ่าย?`);
             if (!confirmed) {
-                window.alert("hello")
                 return;
             }
             const deleteReply = await fetch(`/api/expenses?expenseId=${id}`, {
