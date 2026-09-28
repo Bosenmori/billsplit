@@ -87,13 +87,13 @@ export default function Login(){
                 </form>
                  {result && result.ok &&(
                         <div className="bg-green-950 w-full p-2 rounded-sm">
-                            <p className=" text-green-500 ">✅ เข้าสู่ระบบสำเร็จ</p>
+                            <p className=" text-green-500 ">เข้าสู่ระบบสำเร็จ</p>
                             <p className=" text-white">userId:{' '}{result.data.user?.id} email:{' '}{result.data.user?.email}</p>
                         </div>
                     ) }
                     {result && !result.ok &&(
                         <div className="bg-red-950 w-full p-2 rounded-sm ">
-                            <p className="text-red-500">❌ เกิดข้อผิดพลาด</p>
+                            <p className="text-red-500">เกิดข้อผิดพลาด</p>
                             <p className="text-white">{result.data?.message ?? 'เกิดข้อผิดพลาด'}</p>
                         </div>
                     ) }
