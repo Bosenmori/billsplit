@@ -79,7 +79,7 @@ function buildMerchantTransID(settlementId) {
 }
 
 
-export async function transferFund({ amountSatang, settlementId }) {
+export async function transferFund({ amount, settlementId }) {
   const merchantTransID = buildMerchantTransID(settlementId);
 
   const verify = await kbankPost('/v1/fundtransfer/verifydata', {
@@ -93,7 +93,7 @@ export async function transferFund({ amountSatang, settlementId }) {
     senderName: SANDBOX.senderName,
     senderTaxID: SANDBOX.senderTaxID,
     toBankCode: SANDBOX.toBankCode,
-    amount: (amountSatang / 100).toFixed(2), 
+    amount: amount.toFixed(2), 
     typeOfSender: SANDBOX.typeOfSender,
   });
 
