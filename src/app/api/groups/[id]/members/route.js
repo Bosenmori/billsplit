@@ -122,3 +122,44 @@ export async function POST(request, { params }) {
         return NextResponse.json({ message: "เกิดข้อผิดพลาด", error: error.message }, { status: 500 })
     }
 }
+
+export async function DELETE(request, { params }) {
+    const auth = verifyAuth(request)
+    if (!auth.success) {
+        return NextResponse.json({ message: auth.message }, { status: 401 })
+    }
+    try {
+        const { id } = await params;
+        const groupId = parseInt(id);
+         const userId = new URL(request.url).searchParams.get('userId');
+        //กลุ่มนี้มีอยู่จริงมั้ย
+        const groupResult = await pool.query(`
+            SELECT id, name
+            FROM groups
+            WHERE id = $1
+            `, [groupId]);
+        if (groupResult.rowCount === 0) {
+            return NextResponse.json({ message: 'ไม่พบกลุ่มนี้' }, { status: 404 });
+        }
+
+        const memberResult = await pool.query(`
+            SELECT id
+            FROM group_members
+            WHERE group_id = $1 AND user_id = $2
+            `, [groupId, userId])
+
+        if (memberResult.rowCount === 0) {
+            return NextResponse.json({ message: 'ผู้ใช้นี้ไม่ได้อยู่ในกลุ่ม' }, { status: 409 });
+        }
+
+        await pool.query(`
+            DELETE FROM group_members
+            WHERE group_id = $1 AND user_id = $2
+            `, [groupId, userId])
+
+        return NextResponse.json({ message: 'ลบสำเร็จ' },{status: 201})
+    } catch (error) {
+        console.log(error)
+        return NextResponse.json({message: 'เกิดข้อผิดพลาด', err: error.message}, {status: 500})
+    }
+}

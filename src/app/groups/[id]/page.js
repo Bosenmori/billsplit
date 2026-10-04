@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDate, formatMoney } from '@/lib/format';
+import PayButton from '@/components/PayButton';
 
 export default function GroupDetailPage() {
     const params = useParams();
@@ -87,7 +88,26 @@ export default function GroupDetailPage() {
         }
         loadData();
     }, [params.id, reload]);
+    const handleUserDelete = async (user_id) => {
+        try {
+            if (myRole !== 'admin') {
+                return;
+            }
+            const confirmed = window.confirm("ยันยันที่จะลบสมาชิก");
+            if (!confirmed) {
+                return;
+            }
+            const deleteReply = await fetch(`/api/groups/${params.id}/members?userId=${user_id}`, {
+                method: 'DELETE',
+            })
+            if (deleteReply.ok) {
+                setReload((prev) => prev + 1)
+            }
+        } catch (error) {
+            console.log(error.message)
+        }
 
+    }
     const handleGroupDelete = async () => {
         try {
             if (myRole !== 'admin') {
@@ -207,11 +227,19 @@ export default function GroupDetailPage() {
                                     <p className="font-medium text-zinc-50">{member.name}</p>
                                     <p className="text-sm text-zinc-400">{member.email}</p>
                                 </div>
-                                {member.role === 'admin' && (
+                                {member.role === 'admin' ? (
                                     <span className="rounded-full border border-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
                                         admin
                                     </span>
+                                ) : myRole === 'admin' && (
+                                    <button
+                                        className='text-red-400 '
+                                        onClick={() => handleUserDelete(member.user_id)}
+                                    >
+                                        X
+                                    </button>
                                 )}
+
                             </div>
                         ))}
                     </div>
@@ -317,22 +345,30 @@ export default function GroupDetailPage() {
                         ) : (
                             <div>
                                 {transactions.map((t) => {
-                                    const isME = t.from_user_id === me?.id;
+                                    const isME = me !== null && Number(t.from_user_id) === Number(me.id);
                                     return (
                                         <div
                                             key={`${t.from_user_id}-${t.to_user_id}`}
-                                            className={`mb-2 flex items-center gap-2 rounded-lg border p-3 
-                                                ${isME ? 'border-red-400/40' : 'border-zinc-800'}`}
+                                            className={`mb-2 flex items-center gap-3 rounded-lg border p-3 ${isME ? 'border-red-400/40' : 'border-zinc-800'
+                                                }`}
                                         >
                                             <div className='flex-1'>
                                                 <p className='text-zinc-50'>{t.from_name} → {t.to_name}</p>
                                             </div>
-                                            <p className={`font-semibold t
-                                            ${isME ? 'text-red-400' : 'text-zinc-50'}`
-                                            } >
-                                                {formatMoney(t.amount, rate, moneyType)}</p>
+                                            <p className={`font-semibold ${isME ? 'text-red-400' : 'text-zinc-50'}`}>
+                                                {formatMoney(t.amount, rate, moneyType)}
+                                            </p>
+                                            {isME ? (
+                                                <PayButton
+                                                    groupId={params.id}
+                                                    toUserId={t.to_user_id}
+                                                    toName={t.to_name}
+                                                    amount={t.amount}
+                                                    onPaid={() => setReload((prev) => prev + 1)}
+                                                />
+                                            ) : null}
                                         </div>
-                                    )
+                                    );
                                 })}
                             </div>)}
                     </div>
